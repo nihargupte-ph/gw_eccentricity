@@ -49,7 +49,7 @@ def get_available_methods(return_dict=False):
         "ResidualAmplitude": eccDefinitionUsingResidualAmplitude,
         "ResidualFrequency": eccDefinitionUsingResidualFrequency,
         "AmplitudeFits": eccDefinitionUsingAmplitudeFits,
-        "FrequencyFits": eccDefinitionUsingFrequencyFits
+        "FrequencyFits": eccDefinitionUsingFrequencyFits,
     }
 
     if return_dict:
@@ -58,12 +58,14 @@ def get_available_methods(return_dict=False):
         return list(methods.keys())
 
 
-def measure_eccentricity(tref_in=None,
-                         fref_in=None,
-                         method="Amplitude",
-                         dataDict=None,
-                         num_orbits_to_exclude_before_merger=2,
-                         extra_kwargs=None):
+def measure_eccentricity(
+    tref_in=None,
+    fref_in=None,
+    method="Amplitude",
+    dataDict=None,
+    num_orbits_to_exclude_before_merger=2,
+    extra_kwargs=None,
+):
     """Measure eccentricity and mean anomaly from a gravitational waveform.
 
     Eccentricity is measured using the GW frequency omega22(t) =
@@ -382,6 +384,22 @@ def measure_eccentricity(tref_in=None,
             mean anomaly to zero.
             USE THIS WITH CAUTION!
 
+          compute_omega22_with_np_diff : bool, default=False
+            Compute omega22 with np.diff instead of scipy.interpolate.UnivariateSpline.
+            This can be useful when there are cusps in h22 causing omega22 to blow up
+            at the cusps. In this case, the cusps points in omega22 are set to None
+
+          ignore_early_waveform_for_omega_monotonicity_check: bool, default False
+              In the code we want to check if omega22 is monotonically increasing. But
+              sometimes at the very early waveform it is not. This flag allows us to ignore
+              the first few M of the waveform when checking for monotonicity.
+
+          orbital_frequency : dict, default=None
+            Use the orbital frequency as a check for the pericenter and apocenter locations.
+            This is useful when there are small peaks even in the apocenter regions. This
+            can happen for waveforms with a high eccentricity where the window
+            function of SEOBNRv4EHM creates strange peaks in the apocenter regions.
+
     Returns
     -------
     A dictionary containing the following keys
@@ -438,11 +456,13 @@ def measure_eccentricity(tref_in=None,
 
     if method in available_methods:
         gwecc_object = available_methods[method](
-            dataDict, num_orbits_to_exclude_before_merger, extra_kwargs)
-        return_dict = gwecc_object.measure_ecc(
-            tref_in=tref_in, fref_in=fref_in)
+            dataDict, num_orbits_to_exclude_before_merger, extra_kwargs
+        )
+        return_dict = gwecc_object.measure_ecc(tref_in=tref_in, fref_in=fref_in)
         return_dict.update({"gwecc_object": gwecc_object})
         return return_dict
     else:
-        raise Exception(f"Invalid method {method}, has to be one of"
-                        f" {list(available_methods.keys())}")
+        raise Exception(
+            f"Invalid method {method}, has to be one of"
+            f" {list(available_methods.keys())}"
+        )
